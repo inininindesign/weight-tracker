@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>体重記録</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.4rem;
+      color: #333;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 480px;
+      margin: 0 auto 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      color: #555;
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 1.1rem;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 10px;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 16px;
+    }
+
+    input:focus { border-color: #4CAF50; }
+
+    .weight-input-wrap { position: relative; }
+    .weight-input-wrap select {
+      width: 100%;
+      padding: 12px 44px 12px 14px;
+      font-size: 1.1rem;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 10px;
+      outline: none;
+      appearance: none;
+      background: white;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      margin-bottom: 16px;
+    }
+    .weight-input-wrap select:focus { border-color: #4CAF50; }
+    .unit {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-60%);
+      color: #999;
+      font-size: 1rem;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    button:hover { background: #43a047; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    #message {
+      text-align: center;
+      font-size: 0.9rem;
+      margin-top: 12px;
+      height: 20px;
+      font-weight: 500;
+    }
+
+    .success { color: #4CAF50; }
+    .error { color: #e53935; }
+
+    .chart-wrap {
+      position: relative;
+      height: 240px;
+    }
+
+    .period-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .period-tabs button {
+      flex: 1;
+      padding: 8px;
+      font-size: 0.85rem;
+      background: #f0f0f0;
+      color: #555;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+
+    .period-tabs button.active {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .period-tabs button:hover:not(.active) { background: #e0e0e0; }
+
+    .stat-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat {
+      flex: 1;
+      background: #f8f8f8;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat .val {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #333;
+    }
+
+    .stat .lbl {
+      font-size: 0.75rem;
+      color: #999;
+      margin-top: 2px;
+    }
+
+    .stat .diff-plus { color: #e53935; }
+    .stat .diff-minus { color: #4CAF50; }
+
+    .setup-banner {
+      background: #fff3e0;
+      border: 1.5px solid #ffb74d;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 0.85rem;
+      color: #e65100;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    .no-data { text-align: center; color: #aaa; font-size: 0.9rem; padding: 40px 0; }
+  </style>
+</head>
+<body>
+
+<h1>⚖️ 体重記録</h1>
+
+<div class="card">
+  <div class="setup-banner" id="setupBanner">
+    ⚠️ GASのデプロイURLを設定してください。<br>
+    このファイルをテキストエディタで開き、<br>
+    <code>GAS_URL</code> の値を書き換えてください。
+  </div>
+
+  <label for="dateInput">日付</label>
+  <input type="date" id="dateInput">
+
+  <label for="weightInput">体重</label>
+  <div class="weight-input-wrap">
+    <select id="weightInput"></select>
+    <span class="unit">kg</span>
+  </div>
+
+  <button id="submitBtn" onclick="submitWeight()">記録する</button>
+  <div id="message"></div>
+</div>
+
+<div class="card">
+  <h2>グラフ</h2>
+
+  <div class="period-tabs">
+    <button class="active" onclick="setPeriod(7, this)">1週間</button>
+    <button onclick="setPeriod(30, this)">1ヶ月</button>
+    <button onclick="setPeriod(90, this)">3ヶ月</button>
+    <button onclick="setPeriod(0, this)">全期間</button>
+  </div>
+
+  <div class="stat-row" id="statRow" style="display:none">
+    <div class="stat">
+      <div class="val" id="statLatest">--</div>
+      <div class="lbl">最新 (kg)</div>
+    </div>
+    <div class="stat">
+      <div class="val" id="statMin">--</div>
+      <div class="lbl">最小 (kg)</div>
+    </div>
+    <div class="stat">
+      <div class="val" id="statDiff">--</div>
+      <div class="lbl">期間内増減</div>
+    </div>
+  </div>
+
+  <div class="chart-wrap" id="chartWrap">
+    <div class="no-data" id="noData">データを読み込み中...</div>
+    <canvas id="weightChart" style="display:none"></canvas>
+  </div>
+</div>
+
+<script>
+  // ★ ここにGASのデプロイURLを貼り付ける
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbyvOVjqDpbuEP1dxGwTJ2IJosmqFyrGEbvs31gm7JoFhvXpznr746S3YvlbLcE6Sdnk/exec';
+
+  let allData = [];
+  let currentPeriod = 7;
+  let chart = null;
+
+  window.onload = () => {
+    const today = new Date().toLocaleDateString('sv-SE');
+    document.getElementById('dateInput').value = today;
+
+    // 体重プルダウン生成 (40.0〜150.0、0.1刻み、デフォルト79.5)
+    const sel = document.getElementById('weightInput');
+    for (let v = 400; v <= 1500; v++) {
+      const opt = document.createElement('option');
+      opt.value = (v / 10).toFixed(1);
+      opt.textContent = (v / 10).toFixed(1) + ' kg';
+      if (v === 795) opt.selected = true;
+      sel.appendChild(opt);
+    }
+
+    if (GAS_URL === 'YOUR_GAS_DEPLOY_URL_HERE') {
+      document.getElementById('noData').textContent = 'URLを設定後に表示されます';
+    } else {
+      document.getElementById('setupBanner').style.display = 'none';
+      loadData();
+    }
+  };
+
+  async function submitWeight() {
+    if (GAS_URL === 'YOUR_GAS_DEPLOY_URL_HERE') {
+      showMessage('GASのURLを設定してください', 'error');
+      return;
+    }
+
+    const date = document.getElementById('dateInput').value;
+    const weight = parseFloat(document.getElementById('weightInput').value);
+
+    if (!date) { showMessage('日付を入力してください', 'error'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '送信中...';
+
+    try {
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ date, weight }),
+      });
+      const json = await res.json();
+
+      if (json.success) {
+        showMessage('記録しました！', 'success');
+        document.getElementById('weightInput').value = '';
+        loadData();
+      } else {
+        showMessage('エラーが発生しました', 'error');
+      }
+    } catch {
+      showMessage('送信に失敗しました', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '記録する';
+    }
+  }
+
+  async function loadData() {
+    try {
+      const res = await fetch(GAS_URL);
+      const json = await res.json();
+      allData = (json.data || [])
+        .filter(r => r[0] && r[1])
+        .map(r => ({ date: String(r[0]), weight: parseFloat(r[1]) }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      renderChart();
+    } catch {
+      document.getElementById('noData').textContent = 'データの読み込みに失敗しました';
+    }
+  }
+
+  function setPeriod(days, btn) {
+    document.querySelectorAll('.period-tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentPeriod = days;
+    renderChart();
+  }
+
+  function renderChart() {
+    if (allData.length === 0) {
+      document.getElementById('noData').textContent = 'まだ記録がありません';
+      document.getElementById('weightChart').style.display = 'none';
+      document.getElementById('statRow').style.display = 'none';
+      return;
+    }
+
+    let filtered = allData;
+    if (currentPeriod > 0) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - currentPeriod);
+      const cutoffStr = cutoff.toLocaleDateString('sv-SE');
+      filtered = allData.filter(d => d.date >= cutoffStr);
+    }
+
+    if (filtered.length === 0) {
+      document.getElementById('noData').textContent = 'この期間にデータがありません';
+      document.getElementById('noData').style.display = 'block';
+      document.getElementById('weightChart').style.display = 'none';
+      document.getElementById('statRow').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('noData').style.display = 'none';
+    document.getElementById('weightChart').style.display = 'block';
+    document.getElementById('statRow').style.display = 'flex';
+
+    // 統計
+    const weights = filtered.map(d => d.weight);
+    const latest = weights[weights.length - 1];
+    const min = Math.min(...weights);
+    const diff = latest - weights[0];
+    const diffStr = (diff >= 0 ? '+' : '') + diff.toFixed(1);
+
+    document.getElementById('statLatest').textContent = latest.toFixed(1);
+    document.getElementById('statMin').textContent = min.toFixed(1);
+    const diffEl = document.getElementById('statDiff');
+    diffEl.textContent = diffStr + ' kg';
+    diffEl.className = 'val ' + (diff > 0 ? 'diff-plus' : diff < 0 ? 'diff-minus' : '');
+
+    // グラフ
+    const labels = filtered.map(d => d.date.slice(5)); // MM-DD
+    const data = filtered.map(d => d.weight);
+
+    const minY = Math.floor(Math.min(...data) - 1);
+    const maxY = Math.ceil(Math.max(...data) + 1);
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(document.getElementById('weightChart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          borderColor: '#4CAF50',
+          backgroundColor: 'rgba(76,175,80,0.08)',
+          borderWidth: 2.5,
+          pointRadius: filtered.length <= 30 ? 4 : 2,
+          pointBackgroundColor: '#4CAF50',
+          fill: true,
+          tension: 0.3,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            min: minY,
+            max: maxY,
+            ticks: { callback: v => v + 'kg', font: { size: 11 } },
+            grid: { color: '#f0f0f0' },
+          },
+          x: {
+            ticks: {
+              maxTicksLimit: 8,
+              font: { size: 11 },
+            },
+            grid: { display: false },
+          }
+        }
+      }
+    });
+  }
+
+  function showMessage(msg, type) {
+    const el = document.getElementById('message');
+    el.textContent = msg;
+    el.className = type;
+    setTimeout(() => { el.textContent = ''; el.className = ''; }, 3000);
+  }
+</script>
+
+</body>
+</html>
