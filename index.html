@@ -281,7 +281,7 @@
     btn.textContent = '送信中...';
 
     try {
-      const url = `${GAS_URL}?date=${encodeURIComponent(date)}&weight=${encodeURIComponent(weight)}`;
+      const url = `${GAS_URL}?token=weight&date=${encodeURIComponent(date)}&weight=${encodeURIComponent(weight)}`;
       const res = await fetch(url);
       const json = await res.json();
 
@@ -302,7 +302,7 @@
 
   async function loadData() {
     try {
-      const res = await fetch(GAS_URL);
+      const res = await fetch(`${GAS_URL}?token=weight`);
       const json = await res.json();
       allData = (json.data || [])
         .filter(r => r[0] && r[1] !== '' && r[1] !== null && r[1] !== undefined)
