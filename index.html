@@ -249,7 +249,7 @@
 
     // 体重プルダウン生成 (40.0〜150.0、0.1刻み、デフォルト79.5)
     const sel = document.getElementById('weightInput');
-    for (let v = 400; v <= 1500; v++) {
+    for (let v = 750; v <= 830; v++) {
       const opt = document.createElement('option');
       opt.value = (v / 10).toFixed(1);
       opt.textContent = (v / 10).toFixed(1) + ' kg';
@@ -305,8 +305,9 @@
       const res = await fetch(GAS_URL);
       const json = await res.json();
       allData = (json.data || [])
-        .filter(r => r[0] && r[1])
-        .map(r => ({ date: String(r[0]), weight: parseFloat(r[1]) }))
+        .filter(r => r[0] && r[1] !== '' && r[1] !== null && r[1] !== undefined)
+        .map(r => ({ date: String(r[0]), weight: parseFloat(String(r[1]).replace(',', '.')) }))
+        .filter(r => !isNaN(r.weight))
         .sort((a, b) => a.date.localeCompare(b.date));
 
       renderChart();
@@ -395,7 +396,7 @@
           y: {
             min: minY,
             max: maxY,
-            ticks: { callback: v => v + 'kg', font: { size: 11 } },
+            ticks: { callback: v => parseFloat(v.toFixed(1)) + 'kg', font: { size: 11 } },
             grid: { color: '#f0f0f0' },
           },
           x: {
