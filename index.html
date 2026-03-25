@@ -281,10 +281,8 @@
     btn.textContent = '送信中...';
 
     try {
-      const res = await fetch(GAS_URL, {
-        method: 'POST',
-        body: JSON.stringify({ date, weight }),
-      });
+      const url = `${GAS_URL}?date=${encodeURIComponent(date)}&weight=${encodeURIComponent(weight)}`;
+      const res = await fetch(url);
       const json = await res.json();
 
       if (json.success) {
